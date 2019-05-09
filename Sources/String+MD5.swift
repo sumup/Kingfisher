@@ -20,29 +20,21 @@ Permission is granted to anyone to use this software for any purpose,including c
 */
 
 import Foundation
+import CommonCrypto
 
 extension String: KingfisherCompatible { }
 
 extension Kingfisher where Base == String {
     public var md5: String {
-        if let data = base.data(using: .utf8, allowLossyConversion: true) {
-
-            let message = data.withUnsafeBytes { bytes -> [UInt8] in
-                return Array(UnsafeBufferPointer(start: bytes, count: data.count))
-            }
-
-            let MD5Calculator = MD5(message)
-            let MD5Data = MD5Calculator.calculate()
-
-            var MD5String = String()
-            for c in MD5Data {
-                MD5String += String(format: "%02x", c)
-            }
-            return MD5String
-
-        } else {
+        guard let data = base.data(using: .utf8) else {
             return base
         }
+        var digest = [UInt8](repeating: 0, count: Int(CC_MD5_DIGEST_LENGTH))
+        _ = data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+            return CC_MD5(bytes.baseAddress, CC_LONG(data.count), &digest)
+        }
+
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 }
 
